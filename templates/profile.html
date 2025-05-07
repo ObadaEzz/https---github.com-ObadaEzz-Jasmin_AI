@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h2>Welcome, {{ name }}</h2>
+    <p>Your token is:</p>
+    <textarea rows="5" cols="60">{{ token }}</textarea>
+</body>
+</html>
