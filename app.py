@@ -4,15 +4,16 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
 import os
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
-app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key_here'
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
+# Configuration
+app.secret_key = '12345'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['JWT_SECRET_KEY'] = 'password'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+
+# Extensions
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
@@ -22,7 +23,6 @@ class User(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    profile_image = db.Column(db.String(200), nullable=True)
 
 # Routes
 @app.route('/')
@@ -35,22 +35,16 @@ def register():
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
-        file = request.files.get('profile_image')
 
         if User.query.filter_by(email=email).first():
             return jsonify({'message': 'Email already exists'}), 409
 
-        filename = None
-        if file:
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
         hashed_pw = generate_password_hash(password)
-        new_user = User(name=name, email=email, password=hashed_pw, profile_image=filename)
+        new_user = User(name=name, email=email, password=hashed_pw)
         db.session.add(new_user)
         db.session.commit()
 
-        print(f"Welcome {name}! Email sent to {email}")
+        print(f"Welcome {name}! Email sent to {email}")  # Simulate email
         return redirect(url_for('login'))
     return render_template('register.html')
 
@@ -72,11 +66,11 @@ def login():
     return render_template('login.html')
 
 @app.route('/dashboard')
-@jwt_required()
+@jwt_required()  # يتطلب توكن JWT
 def dashboard():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
-    return render_template('profile.html', name=user.name, token=session.get('token'), profile=user.profile_image)
+    return jsonify({"message": f"Hello {user.name}!", "token": session.get('token')})
 
 @app.route('/logout')
 def logout():
@@ -100,6 +94,7 @@ def reset_password():
     return render_template('reset_password.html')
 
 if __name__ == '__main__':
+    # Create tables and columns if not already created
     if not os.path.exists('users.db'):
         with app.app_context():
             db.create_all()
